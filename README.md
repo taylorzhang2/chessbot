@@ -2,7 +2,6 @@
 discord bot for chess
 
 # Libaries
-This bot uses:
     - [discord.py](https://github.com/Rapptz/discord.py)
     - [python-chess](https://github.com/niklasf/python-chess)
     - cairo2svg for picture rendering
