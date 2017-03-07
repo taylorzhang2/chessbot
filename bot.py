@@ -45,8 +45,9 @@ async def on_message(message):
                 else:    
                     challenger = message.author.mention
                     BOARD_GAME = Game(challenger, challengee)
-                    print(BOARD_GAME.board)
-                    await client.send_message(message.channel, BOARD_GAME.board) 
+                    BOARD_GAME.Get_Picture("white")
+                    await client.send_file(message.channel, fp = 'output.png')
+                    #await client.send_message(message.channel, BOARD_GAME.board) 
                     await client.send_message(message.channel, 'Your move, {}'.format(BOARD_GAME.white.username))
                     #startgame 
     elif BOARD_GAME != None and message.content.startswith('!play'):
@@ -57,8 +58,15 @@ async def on_message(message):
                     BOARD_GAME.board.push_san(move)
                     BOARD_GAME.white.turn = False
                     BOARD_GAME.black.turn = True
-                    await client.send_message(message.channel, BOARD_GAME.board) 
-                    await client.send_message(message.channel, 'Your move, {}'.format(BOARD_GAME.black.username))
+                    BOARD_GAME.Get_Picture("black")
+                    if BOARD_GAME.board.is_game_over() == True:
+                        await client.send_file(message.channel, fp = 'output.png')
+                        await client.send_message(message.channel, 'Game over. {}'.format(BOARD_GAME.board.result()))
+                        BOARD_GAME = None
+                    else:
+                        await client.send_file(message.channel, fp = 'output.png')
+                        #await client.send_message(message.channel, BOARD_GAME.board) 
+                        await client.send_message(message.channel, 'Your move, {}'.format(BOARD_GAME.black.username))
                 except ValueError:
                     await client.send_message(message.channel, '{} is an illegal move, {}'.format(move, message.author))
             else: 
@@ -69,13 +77,20 @@ async def on_message(message):
                     BOARD_GAME.board.push_san(move)
                     BOARD_GAME.white.turn = True
                     BOARD_GAME.black.turn = False
-                    await client.send_message(message.channel, BOARD_GAME.board) 
-                    await client.send_message(message.channel, 'Your move, {}'.format(BOARD_GAME.white.username))
+                    BOARD_GAME.Get_Picture("white")
+                    if BOARD_GAME.board.is_game_over() == True:
+                        await client.send_file(message.channel, fp = 'output.png')
+                        await client.send_message(message.channel, 'Game over. {}'.format(BOARD_GAME.board.result()))
+                        BOARD_GAME = None
+                    else:
+                        await client.send_file(message.channel, fp = 'output.png')
+                        #await client.send_message(message.channel, BOARD_GAME.board) 
+                        await client.send_message(message.channel, 'Your move, {}'.format(BOARD_GAME.white.username))
                 except ValueError:
                     await client.send_message(message.channel, '{} is an illegal move, {}'.formate(move, message.author))
             else: 
                 await client.send_message(message.channel, 'It is not your turn, {}'.format(message.author))
-        if BOARD_GAME.board.is_game_over():
+        if BOARD_GAME.board.is_game_over() == true:
             BOARD_GAME = None
             await client.send_message(message.channel, 'Game over. {}'.format(BOARD_GAME.board.result()))
         
