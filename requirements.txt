@@ -1,0 +1,6 @@
+pycairo==1.10.0
+CairoSVG==2.0.1
+python_chess==0.16.2
+discord.py==0.16.7
+chess==0.1
+PyYAML==3.12
