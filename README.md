@@ -24,5 +24,12 @@ This requires Python 3.5+.
 - get hosted on a cheap server that isn't my own computer
 
 # Example
-    - (will write later)
+    !playchess @insert_username_name
+![start game](/pictures/!playchess.png)
+
+    !play [insert_move]
+![play move](/pictures/!play.png)
+
+    checkmate
     
+![game end](/pictures/!gameover.png)
