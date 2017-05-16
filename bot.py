@@ -2,13 +2,37 @@ import discord
 import asyncio
 import logging
 from game import Game
+from discord.ext import commands
+import traceback
+import sys
 import yaml
-logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger()
 BOARD_GAME = None
 stream = open('config.yaml')
 data = yaml.load(stream)
 print(data)
 client = discord.Client()
+
+description = """beep boop I'm a bot that lets you play chess"""
+try:
+    import uvloop
+except ImportError:
+    pass
+else:
+    asyncio.set_event_loop_policy(uvloop.Event(LoopPolicy()))
+
+extensions = []
+discord_logger = logging.getLogger('discord')
+discord_logger.setLevel(logging.CRITICAL)
+log.setLevel(logging.INFO)
+handler = logging.FileHandler(filename='tz.log', encoding='utf-8', mode='w')
+log.addHandler(handler)
+help_attrs = dict(hidden=True)
+prefix = ['?', '!', '\N{HEAVY EXCLAMATION MARK SYMBOL}']
+bot = commands.Bot(command_prefix=prefix, description=description, pm_help=None, help_attrs=help_attrs)
+print(commands.Group)
+
+
 
 @client.event
 async def on_ready():
