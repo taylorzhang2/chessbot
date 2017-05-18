@@ -36,8 +36,6 @@ async def on_message(message):
         else:
             m = message.content.split(' ')
             if len(m) == 2:
-                print('fuck')
-                print(m)
                 challengee = m[1].strip()
                 print(challengee)
                 if not challengee.startswith('<@'):
