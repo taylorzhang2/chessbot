@@ -7,8 +7,6 @@ import sys
 import yaml
 stream = open('config.yaml')
 data = yaml.load(stream)
-print(data)
-#client = discord.Client()
 
 description = """beep boop I'm a bot that lets you play chess"""
 
@@ -21,14 +19,12 @@ logging.basicConfig(level=logging.DEBUG)
 help_attrs = dict(hidden=True)
 prefix = ['?', '!', '\N{HEAVY EXCLAMATION MARK SYMBOL}']
 bot = commands.Bot(command_prefix=prefix, description=description, pm_help=None, help_attrs=help_attrs)
-print(commands.Group)
 
 @bot.event
 async def on_ready():
     print('logged in as: ')
     print(bot.user.name)
     print(bot.user.id)
-    logging.warning('hello')
     print('-----')
 @bot.event
 async def on_message(message):
@@ -44,17 +40,13 @@ async def load(extension_name : str):
         await bot.say("'''py\n{}; {}\n'''".format(type(e).__name__, str(e)))
         return
     await bot.say("{} loaded.".format(extension_name))
-
-
         
 if __name__ == '__main__':
     for extension in extensions:
         try:
-            logging.warning(extension)
             bot.load_extension(extension)
         except Exception as e:
             print('Failed to load extension {}\n{}: {}'.format(extension, type(e).__name__,e))
-            logging.warning('Failed to load extension {}\n{}: {}'.format(extension, type(e).__name__,e))
     bot.run(data['key'])
     #handlers = log.handlers[:]
     #for hdlr in handlers:
