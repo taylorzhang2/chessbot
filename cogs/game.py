@@ -9,6 +9,7 @@ import logging
 
 
 logging.basicConfig(level=logging.DEBUG)
+
 class Player:
     def __init__(self, color, username):
        self.color = color
@@ -19,12 +20,12 @@ class Player:
     def print(self):
         print(self.player)
         print(self.username)
-        
+
 if __name__ == "__main__":
     a = Player('white', 'adarsh')
     a.print()
 
-class Game():
+class Game(commands.Cog):
     def __init__(self, bot):
         self.board = chess.Board()
         self.white = ''
@@ -41,24 +42,30 @@ class Game():
     def Take_Turn(self):
         self.white.turn = not self.white.turn
         self.black.turn = not self.black.turn
+
+    @commands.command(name='coolbot')
+    async def cool_bot(self, ctx):
+        """Is the bot cool?"""
+        await ctx.send('This bot is cool. :)')
+
     @commands.command()
-    async def test(self):
+    async def test(self, ctx):
         print("////")
-        await self.bot.say('test test')
+        await ctx.send('test test')
     @commands.command()
     async def currentposition(self, color):
-        await self.bot.say('Current board position:')
+        await ctx.send('Current board position:')
         Get_Picture(color)
     @commands.command(pass_context=True)
     async def playchess(self, ctx, name = ''):
         if self.white != '' and self.black != '':
-            return await self.bot.say('There is already a game being played on this server')
+            return await ctx.send('There is already a game being played on this server')
         if len(ctx.message.mentions) == 0:
-            return await self.bot.say('You must mention another player to start a game.')
+            return await ctx.send('You must mention another player to start a game.')
         if len(ctx.message.mentions) > 1:
-            return await self.bot.say('You are mentioning too many people')
+            return await ctx.send('You are mentioning too many people')
         if ctx.message.mentions[0] == ctx.message.author:
-            return await self.bot.say('You cannot play against yourself!')
+            return await ctx.send('You cannot play against yourself!')
 
         author = ctx.message.author
         opponent = ctx.message.mentions[0]
@@ -72,9 +79,9 @@ class Game():
     @commands.command(pass_context=True)
     async def move(self, ctx, move = ''):
         if self.white == '' and self.black == '':
-            self.bot.say('There is no active game available')
+            ctx.send('There is no active game available')
         if move == '':
-            self.bot.say('You must supply a move')
+            ctx.send('You must supply a move')
         player = self.white if self.white.turn == True else self.black
         logging.warning(player.username)
         logging.warning(ctx.message.author)
@@ -99,7 +106,8 @@ class Game():
 
 def setup(bot):
     bot.add_cog(Game(bot))
-        
+
+"""
 if __name__ == "__main__":
     chess1 = chess.Board()
     chess1.push_san('e4')
@@ -109,6 +117,4 @@ if __name__ == "__main__":
     #chess2.svg.board(chess2)
     print(chess1)
     print(chess2)
-    
-
-        
+"""
