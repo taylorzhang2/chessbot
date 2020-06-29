@@ -30,6 +30,8 @@ class Game(commands.Cog):
 
         self.is_first_upload = True
 
+        self.last_move = ''
+
     def Reset(self):
         self.white = ''
         self.black = ''
@@ -82,29 +84,38 @@ class Game(commands.Cog):
 #       await ctx.message.channel.send('Your move, {}'.format(self.white.username))
     @commands.command(pass_context=True)
     async def move(self, ctx, move = ''):
+        await ctx.message.delete()
         if self.white == '' and self.black == '':
-            await ctx.message.delete()
             ctx.send('There is no active game available', delete_after=5)
         if move == '':
-            await ctx.message.delete()
             ctx.send('You must supply a move', delete_after=5)
         player = self.white if self.white.turn == True else self.black
-        logging.warning(player.username)
-        logging.warning(ctx.message.author)
-        if str(ctx.message.author) != str(player.username):
+        opposingPlayer = self.black if self.white.turn == True else self.white
+        logging.warning("Opposing Player: " + str(opposingPlayer.username))
+        logging.warning("Player: " = str(player.username))
+        logging.warning("Message Author: " + str(ctx.message.author))
+        if str(ctx.message.author) != str(player.username): #and move != 'resign':
             return await ctx.message.channel.send('It is not your turn, {}'.format(ctx.message.author), delete_after=5)
-            await ctx.message.delete()
-        elif move == 'resign':
+        elif move == 'resign':# and (str(ctx.message.author) == str(opposingPlayer.username) or str(ctx.message.author) == str(player.username)):
 #            await ctx.message.channel.send('', file=discord.File('output.png', 'output.png'))
 #            await ctx.message.channel.send('Game over. {} resigned.'.format(ctx.message.author))
             file=discord.File('./output.png', filename='image.png')
             embed=discord.Embed()
             embed.set_image(url="attachment://image.png")
-            await ctx.message.channel.edit(content='Game over. {} resigned.'.format(ctx.message.author), embed=embed)
-            await ctx.message.delete()
+            await self.bot.wait_until_ready()
+            self.burner_channel = self.bot.get_channel(727054721789198357)
+            latest_image = await self.burner_channel.send(file=file, embed=embed)
+            if self.last_move == '':
+                final_move = 'none'
+            else:
+                final_move = self.last_move
+            embed=discord.Embed(title='Game over. {} resigned.'.format(ctx.message.author), description='Last move: ' + final_move)
+            embed.set_image(url=latest_image.embeds[0].image.url)
+            await ctx.message.channel.edit(embed=embed)
             self.Reset()
         else:
             try:
+                self.last_move = move
                 self.board.push_san(move)
                 self.Take_Turn()
                 color = "white" if player != self.white else "black"
@@ -116,7 +127,12 @@ class Game(commands.Cog):
                     file=discord.File('./output.png', filename='image.png')
                     embed=discord.Embed()
                     embed.set_image(url="attachment://image.png")
-                    await ctx.message.channel.edit(content='Game over. {}'.format(self.board.result()), embed=embed)
+                    await self.bot.wait_until_ready()
+                    self.burner_channel = self.bot.get_channel(727054721789198357)
+                    latest_image = await self.burner_channel.send(file=file, embed=embed)
+                    embed=discord.Embed(title='Game over. {}'.format(self.board.result()), description='Last move: ' + self.last_move)
+                    embed.set_image(url=latest_image.embeds[0].image.url)
+                    await self.first_message.edit(embed=embed)
                     self.Reset()
                 else:
 #                    await ctx.message.channel.send('', file=discord.File('output.png', 'output.png'))
@@ -130,18 +146,19 @@ class Game(commands.Cog):
                         await self.bot.wait_until_ready()
                         self.burner_channel = self.bot.get_channel(727054721789198357)
                         latest_image = await self.burner_channel.send(file=file, embed=embed)
-                        embed=discord.Embed(title='Your move, {}'.format(nextuser))
+                        embed=discord.Embed(title='Your move, {}'.format(nextuser), description='Last move: ' + self.last_move)
                         embed.set_image(url=latest_image.embeds[0].image.url)
                         self.first_message = await ctx.message.channel.send(embed=embed)
-                    file=discord.File('./output.png', filename='image.png')
-                    embed=discord.Embed()
-                    embed.set_image(url="attachment://image.png")
-                    await self.bot.wait_until_ready()
-                    self.burner_channel = self.bot.get_channel(727054721789198357)
-                    latest_image = await self.burner_channel.send(file=file, embed=embed)
-                    embed=discord.Embed(title='Your move, {}'.format(nextuser))
-                    embed.set_image(url=latest_image.embeds[0].image.url)
-                    await self.first_message.edit(embed=embed)
+                    else:
+                        file=discord.File('./output.png', filename='image.png')
+                        embed=discord.Embed()
+                        embed.set_image(url="attachment://image.png")
+                        await self.bot.wait_until_ready()
+                        self.burner_channel = self.bot.get_channel(727054721789198357)
+                        latest_image = await self.burner_channel.send(file=file, embed=embed)
+                        embed=discord.Embed(title='Your move, {}'.format(nextuser), description='Last move: ' + self.last_move)
+                        embed.set_image(url=latest_image.embeds[0].image.url)
+                        await self.first_message.edit(embed=embed)
             except ValueError:
                 await ctx.message.channel.send('{} is an illegal move, {}'.format(move, ctx.message.author), delete_after=5)
 
