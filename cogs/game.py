@@ -27,10 +27,16 @@ class Game(commands.Cog):
         self.white = ''
         self.black = ''
         self.bot = bot
+
+        self.is_first_upload = True
+
     def Reset(self):
         self.white = ''
         self.black = ''
         self.board = chess.Board()
+
+        self.is_first_upload = True
+
     def Get_Picture(self, color):
         flipped = color == "black"
         svg_data = chess.svg.board(self.board, flipped = flipped)
@@ -69,10 +75,10 @@ class Game(commands.Cog):
         self.black = Player('black', author) if rand != 0 else Player('black', opponent.name + "#" + opponent.discriminator)
         self.white.turn = True
         self.Get_Picture('white')
-        file=discord.File('./output.png', filename='output.png')
-        embed=discord.Embed()
-        embed.set_image(url="attachment://output.png")
-        await ctx.message.channel.send(content='Your move, {}'.format(self.white.username), embed=embed)
+        file=discord.File('./output.png', filename='image.png')
+        embed=discord.Embed(title='Your move, {}'.format(self.white.username))
+        embed.set_image(url="attachment://image.png")
+        self.first_message = await ctx.message.channel.send(file=file, embed=embed)
 #       await ctx.message.channel.send('Your move, {}'.format(self.white.username))
     @commands.command(pass_context=True)
     async def move(self, ctx, move = ''):
@@ -91,9 +97,9 @@ class Game(commands.Cog):
         elif move == 'resign':
 #            await ctx.message.channel.send('', file=discord.File('output.png', 'output.png'))
 #            await ctx.message.channel.send('Game over. {} resigned.'.format(ctx.message.author))
-            file=discord.File('./output.png', filename='output.png')
+            file=discord.File('./output.png', filename='image.png')
             embed=discord.Embed()
-            embed.set_image(url="attachment://output.png")
+            embed.set_image(url="attachment://image.png")
             await ctx.message.channel.edit(content='Game over. {} resigned.'.format(ctx.message.author), embed=embed)
             await ctx.message.delete()
             self.Reset()
@@ -107,18 +113,35 @@ class Game(commands.Cog):
                 if self.board.is_game_over() == True:
 #                    await ctx.message.channel.send('', file=discord.File('output.png', 'output.png'))
 #                    await ctx.message.channel.send('Game over. {}'.format(self.board.result()))
-                    file=discord.File('./output.png', filename='output.png')
+                    file=discord.File('./output.png', filename='image.png')
                     embed=discord.Embed()
-                    embed.set_image(url="attachment://output.png")
+                    embed.set_image(url="attachment://image.png")
                     await ctx.message.channel.edit(content='Game over. {}'.format(self.board.result()), embed=embed)
                     self.Reset()
                 else:
 #                    await ctx.message.channel.send('', file=discord.File('output.png', 'output.png'))
 #                    await ctx.message.channel.send('Your move, {}'.format(nextuser))
-                    file=discord.File('./output.png', filename='output.png')
+                    if self.is_first_upload:
+                        await self.first_message.delete()
+                        self.is_first_upload = False
+                        file=discord.File('./output.png', filename='image.png')
+                        embed=discord.Embed()
+                        embed.set_image(url="attachment://image.png")
+                        await self.bot.wait_until_ready()
+                        self.burner_channel = self.bot.get_channel(727054721789198357)
+                        latest_image = await self.burner_channel.send(file=file, embed=embed)
+                        embed=discord.Embed(title='Your move, {}'.format(nextuser))
+                        embed.set_image(url=latest_image.embeds[0].image.url)
+                        self.first_message = await ctx.message.channel.send(embed=embed)
+                    file=discord.File('./output.png', filename='image.png')
                     embed=discord.Embed()
-                    embed.set_image(url="attachment://output.png")
-                    await ctx.message.channel.edit(content='Your move, {}'.format(nextuser), embed=embed)
+                    embed.set_image(url="attachment://image.png")
+                    await self.bot.wait_until_ready()
+                    self.burner_channel = self.bot.get_channel(727054721789198357)
+                    latest_image = await self.burner_channel.send(file=file, embed=embed)
+                    embed=discord.Embed(title='Your move, {}'.format(nextuser))
+                    embed.set_image(url=latest_image.embeds[0].image.url)
+                    await self.first_message.edit(embed=embed)
             except ValueError:
                 await ctx.message.channel.send('{} is an illegal move, {}'.format(move, ctx.message.author), delete_after=5)
 
