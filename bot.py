@@ -19,7 +19,7 @@ GUILD = os.getenv('DISCORD_GUILD')
 #TOKEN = input('Please enter the token: ')
 #GUILD = input('Please enter the guild: ')
 
-client = discord.Client()
+# client = discord.Client()
 
 #stream = open('config.yaml')
 #data = yaml.load(stream)
@@ -29,12 +29,12 @@ description = """beep boop I'm a bot that lets you play chess"""
 extensions = ['cogs.game']
 #discord_logger = logging.getLogger('discord')
 #discord_logger.setLevel(logging.DEBUG)
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARNING)
 #handler = logging.FileHandler(filename='tz.log', encoding='utf-8', mode='w')
 #log.addHandler(handler)
 help_attrs = dict(hidden=True)
-prefix = ['?', '!', '\N{HEAVY EXCLAMATION MARK SYMBOL}']
-bot = commands.Bot(command_prefix=prefix, description=description, pm_help=None, help_attrs=help_attrs)
+
+bot = commands.Bot(command_prefix='>', description=description, pm_help=None, help_attrs=help_attrs)
 
 @bot.event
 async def on_ready():
@@ -49,6 +49,12 @@ async def on_message(message):
     if message.author.bot:
         return
     await bot.process_commands(message)
+
+@bot.command(name='hi')
+async def hello(ctx):
+    response = 'Hi, ' + ctx.author.name + '!'
+    await ctx.send(response)
+
 """
 @commands.command()
 async def load(extension_name : str, ctx):
@@ -59,22 +65,19 @@ async def load(extension_name : str, ctx):
         return
     await ctx.send("{} loaded.".format(extension_name))
 """
+
 if __name__ == '__main__':
     for extension in extensions:
         try:
             bot.load_extension(extension)
+            print(f"Loaded {extension}.")
         except Exception as e:
             print('Failed to load extension {}\n{}: {}'.format(extension, type(e).__name__,e))
-    client.run(TOKEN)
+    bot.run(TOKEN, bot=True, reconnect=True)
     #handlers = log.handlers[:]
     #for hdlr in handlers:
         #hdlr.close()
         #log.removeHandler(hdlr)
-
-
-
-
-
 
 """
 @client.event
@@ -84,12 +87,9 @@ async def on_ready():
         f'{client.user} is connected to the following guild:\n'
         f'{guild.name}(id: {guild.id})'
 )
-
 """
-@bot.command(name='hi')
-async def hello(ctx):
-    response = 'Hi, ' + message.author.name + '!'
-    await ctx.send(response)
+
+
 """
 
 def eval(s,op):

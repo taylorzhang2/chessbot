@@ -5,12 +5,13 @@ class Player:
        self.color = color
        self.username = username
        self.turn = False
+#       self.mention = self.username.mention
     def move(self, move):
         return
     def print(self):
         print(self.player)
         print(self.username)
-        
+
 if __name__ == "__main__":
     a = Player('white', 'adarsh')
     a.print()
