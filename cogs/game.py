@@ -42,6 +42,10 @@ class Game(commands.Cog):
 
         self.draw_message = None
 
+        self.player = None
+
+        self.opposingPlayer = None
+
     def Reset(self):
         self.white = ''
         self.black = ''
@@ -126,21 +130,29 @@ class Game(commands.Cog):
             ctx.send('There is no active game available', delete_after=5)
         if move == '':
             ctx.send('You must supply a move', delete_after=5)
-        player = self.white if self.white.turn == True else self.black
-        opposingPlayer = self.black if self.white.turn == True else self.white
-        logging.warning("Opposing Player: " + str(opposingPlayer.username))
-        logging.warning("Player: " + str(player.username))
+        self.player = self.white if self.white.turn == True else self.black
+        self.opposingPlayer = self.black if self.white.turn == True else self.white
+        logging.warning("Opposing Player: " + str(self.opposingPlayer.username))
+        logging.warning("Player: " + str(self.player.username))
         logging.warning("Message Author: " + str(ctx.message.author))
-        player_is_opposing_player = str(ctx.message.author) == str(self.bot.get_user(int(opposingPlayer.id)))
-        player_is_current_player = str(ctx.message.author) == str(player.username)
-        special_moves = ['resign', 'draw']
+        player_is_opposing_player = str(ctx.message.author) == str(self.bot.get_user(int(self.opposingPlayer.id)))
+        player_is_current_player = str(ctx.message.author) == str(self.player.username)
+
+
         if move == 'resign':
             logging.warning("Move: " + str(move))
             logging.warning("ctx.message.author: " + str(ctx.message.author))
-            logging.warning("opposingPlayer.id: " + str(opposingPlayer.id))
-            logging.warning("player.username: " + str(player.username))
-        if str(ctx.message.author) != str(player.username) and move not in special_moves:
+            logging.warning("opposingPlayer.id: " + str(self.opposingPlayer.id))
+            logging.warning("player.username: " + str(self.player.username))
+        if str(ctx.message.author) != str(self.player.username) and move != 'resign':
             return await ctx.message.channel.send('It is not your turn, {}'.format(ctx.message.author), delete_after=5)
+        if move == 'draw':
+            if player_is_current_player: # it's the turn of the person offering the draw
+                logging.warning("player_is_current_player: " + str(player_is_current_player))
+                self.draw_message = await ctx.send("<@" + str(self.opposingPlayer.id) + ">, " + str(ctx.message.author) + ' has offered a draw. Do you accept?', delete_after=20)
+                await self.draw_message.add_reaction('✅')
+                await self.draw_message.add_reaction('❌')
+                reacted = False
         elif move == 'resign' and (player_is_opposing_player or player_is_current_player):
             if self.is_first_upload:
                 await self.first_message.delete()
@@ -151,12 +163,15 @@ class Game(commands.Cog):
                 embed_title = 'Game over. {} resigned.'.format(ctx.message.author)
                 await self.Update_Message(ctx, embed_title=embed_title, edit=True)
                 self.Reset()
-        elif move == 'draw':
-            if player_is_current_player: # it's the turn of the person offering the draw
-                logging.warning("player_is_current_player: " + str(player_is_current_player))
-                draw_message = await ctx.send("<@" + str(opposingPlayer.id) + ">, " + str(ctx.message.author) + ' has offered a draw. Do you accept?', delete_after=20)
-                await draw_message.add_reaction('✅')
-                await draw_message.add_reaction('❌')
+        #...
+
+                """
+                async def mytimer2():
+                    if not reacted:
+                        await ctx.message.channel.send('Draw offer timed out.', delete_after=5)
+                    my_timer = threading.Timer(11.0, mytimer2)
+                    my_timer.start()
+                time.sleep(5)
                 async def check_mark_react(message):
                     logging.warning("in check_mark_react. opposingPlayer is below... ")
                     logging.warning(opposingPlayer.username)
@@ -179,7 +194,6 @@ class Game(commands.Cog):
                             check_react_from_opposing_player = True
                     return check_react_from_opposing_player
                     # return user == self.bot.get_user(int(opposingPlayer.id)) and str(reaction.emoji) == '❌'
-                reacted = False
                 async def check_for_reactions():
                     logging.warning("Checking for reactions...")
                     if await check_mark_react(draw_message):
@@ -190,42 +204,47 @@ class Game(commands.Cog):
                     if await x_react(draw_message):
                         reacted = True
                         await ctx.message.channel.send('Draw offer declined.', delete_after=10)
-                async def mytimer():
-                    await check_for_reactions()
-                    my_timer = threading.Timer(10.0, mytimer)
-                    my_timer.start()
-                async def mytimer2():
-                    if not reacted:
-                        await ctx.message.channel.send('Draw offer timed out.', delete_after=5)
-                    my_timer = threading.Timer(11.0, mytimer2)
-                    my_timer.start()
+                await check_for_reactions()
+                async def check_mark_react2(message):
+                    logging.warning("in check_mark_react. opposingPlayer is below... ")
+                    logging.warning(opposingPlayer.username)
+                    check_react_from_opposing_player = False
+                    for i in message.reactions:
+                        logging.warning(i)
+                        users = await i.users().flatten()
+                        logging.warning(users)
+                        if str(i) == '✅' and self.bot.get_user(int(opposingPlayer.id)) in users:
+                            check_react_from_opposing_player = True
+                    return check_react_from_opposing_player
+                    # return user == self.bot.get_user(int(opposingPlayer.id)) and str(reaction.emoji) == '✅'
+                async def x_react2(message):
+                    logging.warning("in x_mark_react. opposingPlayer is below... ")
+                    logging.warning(opposingPlayer.username)
+                    check_react_from_opposing_player = False
+                    for i in message.reactions:
+                        users = await i.users().flatten()
+                        if str(i) == '❌' and self.bot.get_user(int(opposingPlayer.id)) in users:
+                            check_react_from_opposing_player = True
+                    return check_react_from_opposing_player
+                    # return user == self.bot.get_user(int(opposingPlayer.id)) and str(reaction.emoji) == '❌'
+                async def check_for_reactions2():
+                    logging.warning("Checking for reactions...")
+                    if await check_mark_react2(draw_message):
+                        reacted = True
+                        embed_title = 'Game over. ' + str(ctx.message.author) + ' and ' + str(opposingPlayer.username) + ' have agreed to a draw.'
+                        await self.Update_Message(ctx, embed_title=embed_title, edit=True)
+                        self.Reset()
+                    if await x_react2(draw_message):
+                        reacted = True
+                        await ctx.message.channel.send('Draw offer declined.', delete_after=10)
+                time.sleep(5)
+                await check_for_reactions2()
+                """
 
                 # if opponent reacts with check:
                 #   draw code goes here...
                 # else:
                 #   tell opponent to suck it
-            else: # it's not the turn of the person who's offering the draw
-                draw_message = await ctx.send("<@" + str(player.id) + ">, " + str(opposingPlayer.username) + ' has offered a draw. Do you accept?')
-                await draw_message.add_reaction('✅')
-                await draw_message.add_reaction('❌')
-                # if player reacts with check:
-                #   draw code goes here...
-                # else:
-                #   tell player to suck it
-                def check_mark_react(reaction, user):
-                    return user == self.bot.get_user(int(player.id)) and str(reaction.emoji) == '✅'
-                def x_react(reaction, user):
-                    return user == self.bot.get_user(int(player.id)) and str(reaction.emoji) == '❌'
-                try:
-                    reaction, user = await self.bot.wait_for('reaction_add', timeout=20.0, check=(check_mark_react or x_react))
-                except asyncio.TimeoutError:
-                    await ctx.message.channel.send('Draw offer timed out.', delete_after=5)
-                if check_mark_react:
-                    embed_title = 'Game over. ' + str(ctx.message.author) + ' and ' + str(opposingPlayer.username) + ' have agreed to a draw.'
-                    await self.Update_Message(ctx, embed_title=embed_title, edit=True)
-                    self.Reset()
-                if x_react:
-                    await ctx.message.channel.send('Draw offer declined.', delete_after=10)
         else:
             try:
                 self.last_move = move

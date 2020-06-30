@@ -44,6 +44,26 @@ async def on_ready():
     print('-----')
 
 @bot.event
+async def on_reaction_add(reaction, user):
+    game = bot.get_cog('Game')
+    reactionlist = ['✅', '❌']
+    def check(reaction, user):
+        return reaction.message == game.draw_message and user == bot.get_user(game.opposingPlayer.id) and str(reaction) in reactionlist
+    try:
+        reaction, user = await bot.wait_for('reaction_add', timeout=20.0, check=check)
+    except asyncio.TimeoutError:
+        await game.draw_message.channel.send('Draw offer timed out.', delete_after=5)
+    else:
+        if str(reaction) == reactionlist[0]:
+            await game.draw_message.delete()
+            embed_title = 'Game over. ' + str(game.player.username) + ' and ' + str(game.opposingPlayer.username) + ' have agreed to a draw.'
+            await game.Update_Message(ctx, embed_title=embed_title, edit=True)
+            self.Reset()
+        elif str(reaction) == reactionlist[1]:
+            await game.draw_message.delete()
+            await game.draw_message.channel.send('Draw offer declined.', delete_after=5)
+
+@bot.event
 async def on_message(message):
     print('on_message')
     if message.author.bot:
