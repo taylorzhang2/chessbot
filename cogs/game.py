@@ -8,6 +8,7 @@ import cairosvg
 import logging
 import asyncio
 import time
+import threading
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -160,7 +161,7 @@ class Game(commands.Cog):
                     logging.warning("in check_mark_react. opposingPlayer is below... ")
                     logging.warning(opposingPlayer.username)
                     check_react_from_opposing_player = False
-                    async for i in message.reactions:
+                    for i in message.reactions:
                         logging.warning(i)
                         users = await i.users().flatten()
                         logging.warning(users)
@@ -172,7 +173,7 @@ class Game(commands.Cog):
                     logging.warning("in x_mark_react. opposingPlayer is below... ")
                     logging.warning(opposingPlayer.username)
                     check_react_from_opposing_player = False
-                    async for i in message.reactions:
+                    for i in message.reactions:
                         users = await i.users().flatten()
                         if str(i) == '❌' and self.bot.get_user(int(opposingPlayer.id)) in users:
                             check_react_from_opposing_player = True
@@ -189,12 +190,15 @@ class Game(commands.Cog):
                     if await x_react(draw_message):
                         reacted = True
                         await ctx.message.channel.send('Draw offer declined.', delete_after=10)
-                time.sleep(10)
-                await check_for_reactions()
-                time.sleep(10)
-                await check_for_reactions()
-                if not reacted:
-                    await ctx.message.channel.send('Draw offer timed out.', delete_after=5)
+                async def mytimer():
+                    await check_for_reactions()
+                    my_timer = threading.Timer(10.0, mytimer)
+                    my_timer.start()
+                async def mytimer2():
+                    if not reacted:
+                        await ctx.message.channel.send('Draw offer timed out.', delete_after=5)
+                    my_timer = threading.Timer(11.0, mytimer2)
+                    my_timer.start()
 
                 # if opponent reacts with check:
                 #   draw code goes here...
