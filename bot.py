@@ -52,8 +52,8 @@ async def on_message(message):
 
 @bot.command(name='hi')
 async def hello(ctx):
-    response = 'Hi, ' + ctx.author.name + '!'
-    await ctx.send(response)
+    response = 'Hi, <@' + str(ctx.author.id) + '>!'
+    await ctx.send(response, delete_after=5)
 
 """
 @commands.command()

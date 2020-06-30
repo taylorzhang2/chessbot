@@ -6,15 +6,20 @@ import random
 import cairo
 import cairosvg
 import logging
+import asyncio
+import time
 
 logging.basicConfig(level=logging.DEBUG)
 
 class Player:
-    def __init__(self, color, username):
-       self.color = color
-       self.username = username
-       self.turn = False
+    def __init__(self, color, username, id):
+        self.color = color
+        self.username = username
+        self.turn = False
 #       self.mention = self.username.mention
+
+        self.id = id
+
     def move(self, move):
         return
     def print(self):
@@ -30,7 +35,11 @@ class Game(commands.Cog):
 
         self.is_first_upload = True
 
-        self.last_move = ''
+        self.last_move = 'none'
+
+        self.nextuser = None
+
+        self.draw_message = None
 
     def Reset(self):
         self.white = ''
@@ -43,19 +52,41 @@ class Game(commands.Cog):
         flipped = color == "black"
         svg_data = chess.svg.board(self.board, flipped = flipped)
         cairosvg.svg2png(bytestring=svg_data, write_to = "output.png")
+
     def Take_Turn(self):
         self.white.turn = not self.white.turn
         self.black.turn = not self.black.turn
-    @commands.command()
+
+    async def Update_Message(self, ctx, embed_title, edit=False):
+        file=discord.File('./output.png', filename='image.png')
+        embed=discord.Embed()
+        embed.set_image(url="attachment://image.png")
+        self.burner_channel = self.bot.get_channel(727054721789198357)
+        latest_image = await self.burner_channel.send(file=file, embed=embed)
+        embed=discord.Embed(title=embed_title, description='Last move: ' + self.last_move)
+        embed.set_image(url=latest_image.embeds[0].image.url)
+        footer_text = "White: {}".format(self.white.username) + "\nBlack: {}".format(self.black.username)
+        embed.set_footer(text=footer_text)
+        if edit: # edit message
+            await self.first_message.edit(embed=embed)
+        else: # send message
+            self.first_message = await ctx.message.channel.send(embed=embed)
+
+    @commands.command(pass_context=True)
     async def test(self, ctx):
         print("////")
         await ctx.send('test test')
-    @commands.command()
-    async def currentposition(self, color):
-        await ctx.send('Current board position:')
-        Get_Picture(color)
+
     @commands.command(pass_context=True)
-    async def playchess(self, ctx, name = ''):
+    async def currpos(self, ctx, color):
+        # await ctx.send('Current board position:')
+        self.Get_Picture(color)
+        await self.first_message.delete()
+        embed_title = 'Your move, {}'.format(self.nextuser)
+        await self.Update_Message(ctx, embed_title=embed_title)
+
+    @commands.command(pass_context=True)
+    async def play(self, ctx, name = ''):
         if self.white != '' and self.black != '':
             await ctx.message.delete()
             return await ctx.send('There is already a game being played on this server')
@@ -72,16 +103,21 @@ class Game(commands.Cog):
 #        self.author_player = ctx.message.author
         opponent = ctx.message.mentions[0]
 #        self.opponent_player = ctx.message.mentions[0]
+        self.nextuser = author
         rand = 0 #random.randrange(0,2)
-        self.white = Player('white', author) if rand == 0 else Player('white', opponent.name + "#" +  opponent.discriminator)
-        self.black = Player('black', author) if rand != 0 else Player('black', opponent.name + "#" + opponent.discriminator)
+        self.white = Player('white', author, ctx.message.author.id) if rand == 0 else Player('white', opponent.name + "#" +  opponent.discriminator, ctx.message.mentions[0].id)
+        self.black = Player('black', author, ctx.message.author.id) if rand != 0 else Player('black', opponent.name + "#" + opponent.discriminator, ctx.message.mentions[0].id)
         self.white.turn = True
         self.Get_Picture('white')
-        file=discord.File('./output.png', filename='image.png')
-        embed=discord.Embed(title='Your move, {}'.format(self.white.username))
-        embed.set_image(url="attachment://image.png")
-        self.first_message = await ctx.message.channel.send(file=file, embed=embed)
-#       await ctx.message.channel.send('Your move, {}'.format(self.white.username))
+        # user_id_to_mention = str(self.white.id)
+        # other_user_id_to_mention = str(self.black.id)
+        # logging.warning("user_to_mention: <@" + str(user_id_to_mention) + '>')
+        # user_to_mention = self.bot.get_user(int(user_id_to_mention))
+        #embed.add_field(name="Current player to move:", value="<@" + str(user_id_to_mention) + '>')
+        #footer_text = "White: <@" + str(user_id_to_mention) + ">\nBlack: <@" + str(other_user_id_to_mention) + ">"
+        embed_title = 'Your move, {}'.format(self.white.username)
+        await self.Update_Message(ctx, embed_title=embed_title)
+
     @commands.command(pass_context=True)
     async def move(self, ctx, move = ''):
         await ctx.message.delete()
@@ -92,73 +128,121 @@ class Game(commands.Cog):
         player = self.white if self.white.turn == True else self.black
         opposingPlayer = self.black if self.white.turn == True else self.white
         logging.warning("Opposing Player: " + str(opposingPlayer.username))
-        logging.warning("Player: " = str(player.username))
+        logging.warning("Player: " + str(player.username))
         logging.warning("Message Author: " + str(ctx.message.author))
-        if str(ctx.message.author) != str(player.username): #and move != 'resign':
+        player_is_opposing_player = str(ctx.message.author) == str(self.bot.get_user(int(opposingPlayer.id)))
+        player_is_current_player = str(ctx.message.author) == str(player.username)
+        special_moves = ['resign', 'draw']
+        if move == 'resign':
+            logging.warning("Move: " + str(move))
+            logging.warning("ctx.message.author: " + str(ctx.message.author))
+            logging.warning("opposingPlayer.id: " + str(opposingPlayer.id))
+            logging.warning("player.username: " + str(player.username))
+        if str(ctx.message.author) != str(player.username) and move not in special_moves:
             return await ctx.message.channel.send('It is not your turn, {}'.format(ctx.message.author), delete_after=5)
-        elif move == 'resign':# and (str(ctx.message.author) == str(opposingPlayer.username) or str(ctx.message.author) == str(player.username)):
-#            await ctx.message.channel.send('', file=discord.File('output.png', 'output.png'))
-#            await ctx.message.channel.send('Game over. {} resigned.'.format(ctx.message.author))
-            file=discord.File('./output.png', filename='image.png')
-            embed=discord.Embed()
-            embed.set_image(url="attachment://image.png")
-            await self.bot.wait_until_ready()
-            self.burner_channel = self.bot.get_channel(727054721789198357)
-            latest_image = await self.burner_channel.send(file=file, embed=embed)
-            if self.last_move == '':
-                final_move = 'none'
+        elif move == 'resign' and (player_is_opposing_player or player_is_current_player):
+            if self.is_first_upload:
+                await self.first_message.delete()
+                embed_title = 'Game over. {} resigned.'.format(ctx.message.author)
+                await self.Update_Message(ctx, embed_title=embed_title)
+                self.Reset()
             else:
-                final_move = self.last_move
-            embed=discord.Embed(title='Game over. {} resigned.'.format(ctx.message.author), description='Last move: ' + final_move)
-            embed.set_image(url=latest_image.embeds[0].image.url)
-            await ctx.message.channel.edit(embed=embed)
-            self.Reset()
+                embed_title = 'Game over. {} resigned.'.format(ctx.message.author)
+                await self.Update_Message(ctx, embed_title=embed_title, edit=True)
+                self.Reset()
+        elif move == 'draw':
+            if player_is_current_player: # it's the turn of the person offering the draw
+                logging.warning("player_is_current_player: " + str(player_is_current_player))
+                draw_message = await ctx.send("<@" + str(opposingPlayer.id) + ">, " + str(ctx.message.author) + ' has offered a draw. Do you accept?', delete_after=20)
+                await draw_message.add_reaction('✅')
+                await draw_message.add_reaction('❌')
+                async def check_mark_react(message):
+                    logging.warning("in check_mark_react. opposingPlayer is below... ")
+                    logging.warning(opposingPlayer.username)
+                    check_react_from_opposing_player = False
+                    async for i in message.reactions:
+                        logging.warning(i)
+                        users = await i.users().flatten()
+                        logging.warning(users)
+                        if str(i) == '✅' and self.bot.get_user(int(opposingPlayer.id)) in users:
+                            check_react_from_opposing_player = True
+                    return check_react_from_opposing_player
+                    # return user == self.bot.get_user(int(opposingPlayer.id)) and str(reaction.emoji) == '✅'
+                async def x_react(message):
+                    logging.warning("in x_mark_react. opposingPlayer is below... ")
+                    logging.warning(opposingPlayer.username)
+                    check_react_from_opposing_player = False
+                    async for i in message.reactions:
+                        users = await i.users().flatten()
+                        if str(i) == '❌' and self.bot.get_user(int(opposingPlayer.id)) in users:
+                            check_react_from_opposing_player = True
+                    return check_react_from_opposing_player
+                    # return user == self.bot.get_user(int(opposingPlayer.id)) and str(reaction.emoji) == '❌'
+                reacted = False
+                async def check_for_reactions():
+                    logging.warning("Checking for reactions...")
+                    if await check_mark_react(draw_message):
+                        reacted = True
+                        embed_title = 'Game over. ' + str(ctx.message.author) + ' and ' + str(opposingPlayer.username) + ' have agreed to a draw.'
+                        await self.Update_Message(ctx, embed_title=embed_title, edit=True)
+                        self.Reset()
+                    if await x_react(draw_message):
+                        reacted = True
+                        await ctx.message.channel.send('Draw offer declined.', delete_after=10)
+                time.sleep(10)
+                await check_for_reactions()
+                time.sleep(10)
+                await check_for_reactions()
+                if not reacted:
+                    await ctx.message.channel.send('Draw offer timed out.', delete_after=5)
+
+                # if opponent reacts with check:
+                #   draw code goes here...
+                # else:
+                #   tell opponent to suck it
+            else: # it's not the turn of the person who's offering the draw
+                draw_message = await ctx.send("<@" + str(player.id) + ">, " + str(opposingPlayer.username) + ' has offered a draw. Do you accept?')
+                await draw_message.add_reaction('✅')
+                await draw_message.add_reaction('❌')
+                # if player reacts with check:
+                #   draw code goes here...
+                # else:
+                #   tell player to suck it
+                def check_mark_react(reaction, user):
+                    return user == self.bot.get_user(int(player.id)) and str(reaction.emoji) == '✅'
+                def x_react(reaction, user):
+                    return user == self.bot.get_user(int(player.id)) and str(reaction.emoji) == '❌'
+                try:
+                    reaction, user = await self.bot.wait_for('reaction_add', timeout=20.0, check=(check_mark_react or x_react))
+                except asyncio.TimeoutError:
+                    await ctx.message.channel.send('Draw offer timed out.', delete_after=5)
+                if check_mark_react:
+                    embed_title = 'Game over. ' + str(ctx.message.author) + ' and ' + str(opposingPlayer.username) + ' have agreed to a draw.'
+                    await self.Update_Message(ctx, embed_title=embed_title, edit=True)
+                    self.Reset()
+                if x_react:
+                    await ctx.message.channel.send('Draw offer declined.', delete_after=10)
         else:
             try:
                 self.last_move = move
                 self.board.push_san(move)
                 self.Take_Turn()
                 color = "white" if player != self.white else "black"
-                nextuser = self.white.username if player != self.white else self.black.username
+                self.nextuser = self.white.username if player != self.white else self.black.username
                 self.Get_Picture(color)
                 if self.board.is_game_over() == True:
-#                    await ctx.message.channel.send('', file=discord.File('output.png', 'output.png'))
-#                    await ctx.message.channel.send('Game over. {}'.format(self.board.result()))
-                    file=discord.File('./output.png', filename='image.png')
-                    embed=discord.Embed()
-                    embed.set_image(url="attachment://image.png")
-                    await self.bot.wait_until_ready()
-                    self.burner_channel = self.bot.get_channel(727054721789198357)
-                    latest_image = await self.burner_channel.send(file=file, embed=embed)
-                    embed=discord.Embed(title='Game over. {}'.format(self.board.result()), description='Last move: ' + self.last_move)
-                    embed.set_image(url=latest_image.embeds[0].image.url)
-                    await self.first_message.edit(embed=embed)
+                    embed_title = 'Game over. {}'.format(self.board.result())
+                    await self.Update_Message(ctx, embed_title=embed_title, edit=True)
                     self.Reset()
                 else:
-#                    await ctx.message.channel.send('', file=discord.File('output.png', 'output.png'))
-#                    await ctx.message.channel.send('Your move, {}'.format(nextuser))
                     if self.is_first_upload:
                         await self.first_message.delete()
                         self.is_first_upload = False
-                        file=discord.File('./output.png', filename='image.png')
-                        embed=discord.Embed()
-                        embed.set_image(url="attachment://image.png")
-                        await self.bot.wait_until_ready()
-                        self.burner_channel = self.bot.get_channel(727054721789198357)
-                        latest_image = await self.burner_channel.send(file=file, embed=embed)
-                        embed=discord.Embed(title='Your move, {}'.format(nextuser), description='Last move: ' + self.last_move)
-                        embed.set_image(url=latest_image.embeds[0].image.url)
-                        self.first_message = await ctx.message.channel.send(embed=embed)
+                        embed_title = 'Your move, {}'.format(self.nextuser)
+                        await self.Update_Message(ctx, embed_title=embed_title)
                     else:
-                        file=discord.File('./output.png', filename='image.png')
-                        embed=discord.Embed()
-                        embed.set_image(url="attachment://image.png")
-                        await self.bot.wait_until_ready()
-                        self.burner_channel = self.bot.get_channel(727054721789198357)
-                        latest_image = await self.burner_channel.send(file=file, embed=embed)
-                        embed=discord.Embed(title='Your move, {}'.format(nextuser), description='Last move: ' + self.last_move)
-                        embed.set_image(url=latest_image.embeds[0].image.url)
-                        await self.first_message.edit(embed=embed)
+                        embed_title = 'Your move, {}'.format(self.nextuser)
+                        await self.Update_Message(ctx, embed_title=embed_title, edit=True)
             except ValueError:
                 await ctx.message.channel.send('{} is an illegal move, {}'.format(move, ctx.message.author), delete_after=5)
 

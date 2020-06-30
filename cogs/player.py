@@ -1,11 +1,14 @@
 #player class
 #constructor: player = white or black
 class Player:
-    def __init__(self, color, username):
-       self.color = color
-       self.username = username
-       self.turn = False
+    def __init__(self, color, username, id):
+        self.color = color
+        self.username = username
+        self.turn = False
 #       self.mention = self.username.mention
+
+        self.id = id
+
     def move(self, move):
         return
     def print(self):
